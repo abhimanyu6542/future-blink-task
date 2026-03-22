@@ -25,33 +25,6 @@ Make sure you have these installed before starting:
 - [MongoDB](https://www.mongodb.com/try/download/community) running locally, or a free [MongoDB Atlas](https://www.mongodb.com/atlas) cluster
 - A free [OpenRouter](https://openrouter.ai) account and API key
 
----
-
-## Project Structure
-
-```
-mern-ai-flow/
-├── backend/
-│   ├── src/
-│   │   ├── models/
-│   │   │   └── Conversation.ts   # Mongoose schema
-│   │   └── server.ts             # Express server + API routes
-│   ├── .env
-│   ├── package.json
-│   └── tsconfig.json
-└── frontend/
-    ├── src/
-    │   ├── nodes/
-    │   │   ├── InputNode.tsx     # Prompt input node
-    │   │   └── ResultNode.tsx    # AI response node
-    │   ├── App.tsx               # Main app + React Flow canvas
-    │   ├── main.tsx
-    │   └── index.css
-    ├── index.html
-    ├── package.json
-    ├── tailwind.config.js
-    └── vite.config.ts
-```
 
 ---
 
