@@ -1,136 +1,24 @@
-import { useCallback, useRef, useState } from "react";
-import {
-  ReactFlow,
-  Background,
-  Controls,
-  MiniMap,
-  addEdge,
-  useNodesState,
-  useEdgesState,
-  type Node,
-  type Edge,
-  type OnConnect,
-} from "@xyflow/react";
+import { ReactFlow, Background, Controls, MiniMap } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
-import InputNode, { type InputNodeData } from "./nodes/InputNode";
-import ResultNode, { type ResultNodeData } from "./nodes/ResultNode";
+import InputNode from "./nodes/InputNode";
+import ResultNode from "./nodes/ResultNode";
+import { useFlow } from "./hooks/useFlow";
 
 const nodeTypes = {
   inputNode: InputNode,
   resultNode: ResultNode,
 };
 
-const isMobile = window.innerWidth < 640;
-
-const initialEdges: Edge[] = [
-  {
-    id: "e1-2",
-    source: "1",
-    target: "2",
-    animated: true,
-    style: { stroke: "#6366f1", strokeWidth: 2 },
-    ...(isMobile ? { sourceHandle: null, targetHandle: null } : {}),
-  },
-];
-
 export default function App() {
-  const promptRef = useRef("");
-  const [response, setResponse] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
-
-  // Stable callback — never changes, so InputNode never remounts
-  const onPromptReady = useCallback((val: string) => {
-    promptRef.current = val;
-  }, []);
-
-  // Nodes are built once; ResultNode data is updated via setNodes
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([
-    {
-      id: "1",
-      type: "inputNode",
-      position: isMobile ? { x: 20, y: 40 } : { x: 80, y: 180 },
-      data: { onPromptReady } satisfies InputNodeData,
-    },
-    {
-      id: "2",
-      type: "resultNode",
-      position: isMobile ? { x: 20, y: 260 } : { x: 520, y: 180 },
-      data: { response: "", loading: false } satisfies ResultNodeData,
-    },
-  ]);
-
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-
-  const onConnect: OnConnect = useCallback(
-    (connection) => setEdges((eds) => addEdge(connection, eds)),
-    [setEdges]
-  );
-
-  // Update only the result node data
-  const updateResultNode = useCallback(
-    (patch: Partial<ResultNodeData>) => {
-      setNodes((nds) =>
-        nds.map((n) =>
-          n.id === "2" ? { ...n, data: { ...n.data, ...patch } } : n
-        )
-      );
-    },
-    [setNodes]
-  );
-
-  const handleRun = async () => {
-    const prompt = promptRef.current.trim();
-    if (!prompt) return;
-
-    setLoading(true);
-    updateResultNode({ loading: true, response: "" });
-    setSaveStatus("idle");
-
-    try {
-      const res = await fetch("/api/ask-ai", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
-      });
-      const data = (await res.json()) as { answer?: string; error?: string };
-      if (!res.ok) throw new Error(data.error ?? "Request failed");
-      const answer = data.answer ?? "";
-      setResponse(answer);
-      updateResultNode({ loading: false, response: answer });
-    } catch (err) {
-      const msg = `Error: ${(err as Error).message}`;
-      setResponse(msg);
-      updateResultNode({ loading: false, response: msg });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSave = async () => {
-    const prompt = promptRef.current.trim();
-    if (!prompt || !response.trim()) return;
-    setSaveStatus("saving");
-
-    try {
-      const res = await fetch("/api/save", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt, response }),
-      });
-      if (!res.ok) throw new Error("Save failed");
-      setSaveStatus("saved");
-      setTimeout(() => setSaveStatus("idle"), 2500);
-    } catch {
-      setSaveStatus("error");
-      setTimeout(() => setSaveStatus("idle"), 2500);
-    }
-  };
+  const {
+    nodes, edges, loading, response, saveStatus,
+    onNodesChange, onEdgesChange, onConnect,
+    handleRun, handleSave,
+  } = useFlow();
 
   return (
     <div className="flex flex-col h-screen bg-gray-950 text-white">
-      {/* Header */}
       <header className="flex flex-wrap items-center justify-between gap-2 px-3 sm:px-6 py-2 sm:py-3 bg-gray-900 border-b border-gray-800 shrink-0">
         <div className="flex items-center gap-2">
           <span className="text-indigo-400 text-lg sm:text-xl">⚡</span>
@@ -162,7 +50,6 @@ export default function App() {
         </div>
       </header>
 
-      {/* Flow canvas */}
       <div className="flex-1 min-h-0">
         <ReactFlow
           nodes={nodes}
